@@ -32,9 +32,14 @@ import pprint # pretty printing!
 
 from collections import namedtuple
 
+FC_AWS_ENV = "AWS_DEFAULT_PROFILE"
+
 # simple sanity check for start/end dates.  exceptions will occur with anything
 # more complicatedly wrong
 FC_MATCH_DATE = "[0-9]{4}-[0-1][0-9]-[0-3][0-9]"
+
+# current valid values are MONTHLY and DAILY
+FC_INTERVALS = ["MONTHLY", "DAILY"]
 
 # a list of currently available dimensions by which to group
 GROUP_DIMENSIONS = ["AZ",
@@ -80,7 +85,6 @@ AWS_REGIONS = [
 ]
 
 # array of default abbreviations to use with output
-# TODO build programatically?
 ABBRV = {
     "AWS CloudTrail": "CT",
     "AWS Data Transfer": "DT",
@@ -102,6 +106,7 @@ ABBRV = {
 #
 # strip off beginning "Amazon" and "AWS" from service name
 # then just use remaining uppercase letters to form abbreviation.
+# currently not in use
 def simple_abbreviation(string, suffix=""):
     abbr = ""
     if string.find("AWS") == 0:
@@ -114,6 +119,8 @@ def simple_abbreviation(string, suffix=""):
 
     return abbr 
 
+# currently not in use.  originally, would be used to generate abbreviations
+# for better printing on the screen, but not really needed.
 def build_abbreviations(a, s, r, start, end):
     abbrv = {}
 
@@ -151,7 +158,6 @@ def get_costs(a, s, rlist, start, end, dims, tags, granularity="MONTHLY"):
             if len(dims) > 0 or len(tags) > 0:
                 dims = dims.split(",")
                 if len(dims) > 0 and dims != [""]:
-                    print("in here")
                     for d in dims:
                         groups.append({"Type":"DIMENSION", "Key":d})
 
@@ -159,7 +165,7 @@ def get_costs(a, s, rlist, start, end, dims, tags, granularity="MONTHLY"):
             if len(tags) > 0 and tags != [""]:
                 for t in tags:
                     groups.append({"Type":"TAG", "Key":t})
-            else: # group by service by default
+            if len(groups) == 0: # group by service by default
                 groups.append({"Type":"DIMENSION", "Key":"SERVICE"})
 
             # monthly usage
@@ -181,7 +187,6 @@ def get_costs(a, s, rlist, start, end, dims, tags, granularity="MONTHLY"):
                         "estimated": groups['Estimated'],
                         "time_start": groups['TimePeriod']['Start'],
                         "time_end": groups['TimePeriod']['End'],
-                        #"groups": group['Keys'][0],
                         "group": group['Keys'],
                         #"srvabbr": ABBRV[group['Keys'][0]],
                         "blended_cost": group['Metrics']['BlendedCost'],
@@ -189,13 +194,6 @@ def get_costs(a, s, rlist, start, end, dims, tags, granularity="MONTHLY"):
                         "usage_quantity": group['Metrics']['UsageQuantity']
                     }
                     costs.append(cost)
-#            print("=== Daily Usage ===")
-#            # daily usage
-#            res = ce.get_cost_and_usage(TimePeriod={"Start":start, "End":end},
-#                                        Granularity="DAILY",
-#                                        Metrics=["BlendedCost", "UnblendedCost", "UsageQuantity"])
-#            rbt = res['ResultsByTime']
-#            pprint.pprint(rbt)
     except:
         e = sys.exc_info()
         print("ERROR: exception region=%s, error=%s" %(r, str(e)))
@@ -217,8 +215,29 @@ def flatten(d, parent_key='', sep='_'):
             items.append((new_key, v))
     return dict(items)
 
+# output is [{'group': 'name', values:{'unblended_cost':xxx, 'unblended_unit':xxx,
+#             'usage_quantity':xxx, 'usage_unit':xxx}}]
+def consolidate_by_group(costs):
+    out = []
+    for cost in costs:
+        for i in range(0, len(out)):
+            if out[i]['group'] == cost['group'][0]:
+                out[i]['values']['unblended_cost'] += \
+                        float(cost['unblended_cost']['Amount'])
+                out[i]['values']['usage_quantity'] += \
+                        float(cost['usage_quantity']['Amount'])
+                print(out[i])
+        else: # add to output
+            tmp = {'group':cost['group'][0], 'values':{}}
+            tmp['values'] = {'unblended_cost': float(cost['unblended_cost']['Amount']),
+                             'unblended_unit': cost['unblended_cost']['Unit'],
+                             'usage_quantity': float(cost['usage_quantity']['Amount']),
+                             'usage_unit': cost['usage_quantity']['Unit']}
+            out.append(tmp)
+    return out
+
 # pass return value from get_costs()
-def print_results(costs, use_json=False, use_csv=False):
+def print_results(costs, use_json=False, use_csv=False, start=None, end=None):
     if use_json == True:
         print(json.dumps(costs, sort_keys=True, indent=4))
     elif use_csv == True:
@@ -233,29 +252,16 @@ def print_results(costs, use_json=False, use_csv=False):
         for cost in flat_costs:
             csv_writer.writerow(cost)
     else:
-        for cost in costs:
-            print("Region: %s\n"            \
-                  "Estimated: %s\n"         \
-                  "Start Time: %s\n"        \
-                  "End Time: %s\n"          \
-                  "Grouped By: %s\n"        \
-                  "Blended Cost: %.2f %s\n"   \
-                  "Unblended Cost: %.2f %s\n" \
-                  "Usage Quantity: %.2f %s\n" \
-                  %(cost['region'],
-                   cost['estimated'],
-                   cost['time_start'],
-                   cost['time_end'],
-                   cost['group'],
-                   float(cost['blended_cost']['Amount']),
-                   cost['blended_cost']['Unit'],
-                   float(cost['unblended_cost']['Amount']),
-                   cost['unblended_cost']['Unit'],
-                   float(cost['usage_quantity']['Amount']),
-                   cost['usage_quantity']['Unit']))
-
-
-        
+        out = consolidate_by_group(costs)
+        print("\nSummary for costs: %s - %s\n" %(start, end))
+        # print header.  hard-coded for now
+        print("%s %61s" %("Group", "Cost"))
+        print("%s %61s" %("-----", "----"))
+        for cost in out:
+            print("%-54s\t%14.2f %s"          \
+                  %(cost['group'],
+                  cost['values']['unblended_cost'],
+                  cost['values']['unblended_unit']))
 
 # human-readable option currently not used, so hide it from usage
 def print_usage():
@@ -272,6 +278,7 @@ def print_usage():
            "\t-c --csv - Output as CSV.  Not compatible with --json.\n"
            "\t-d --dimension <dimension> - Group output by dimension (examples: 'AZ','INSTANCE_TYPE','LINKED_ACCOUNT','OPERATION','PURCHASE_TYPE','REGION','SERVICE','USAGE_TYPE','USAGE_TYPE_GROUP','RECORD_TYPE','OPERATING_SYSTEM','TENANCY','SCOPE','PLATFORM','SUBSCRIPTION_ID','LEGAL_ENTITY_NAME','DEPLOYMENT_OPTION','DATABASE_ENGINE','CACHE_ENGINE','INSTANCE_TYPE_FAMILY')\n"
            "\t-g --tag <tag name> - Group by tag name (list of names in format Tag1,Tag2,...,TagN).\n"
+           "\t-i --interval <interval> - Dumps stats at <interval> granularity.  Valid values are MONTHLY (default) and DAILY."
            #"\t-b --abbrv - Output service abbreviations.\n\n"
            "\tOne of the following three parameters are required:\n"
            "\t\t1. Both the -a and -s options.\n"
@@ -294,13 +301,14 @@ def parse_options(argv):
     parser.add_argument("-c", "--csv", action="store_true", default=False)
     parser.add_argument("-d", "--dimension", type=str, default="")
     parser.add_argument("-g", "--tag", type=str, default="")
+    parser.add_argument("-i", "--interval", type=str, default="MONTHLY")
 
 
     args = parser.parse_args(argv)
     if (len(args.regions) == 0):
-        return args.profile, args.access_key, args.secret_key, [], args.timerange, args.json, args.csv, args.dimension, args.tag
+        return args.profile, args.access_key, args.secret_key, [], args.timerange, args.json, args.csv, args.dimension, args.tag, args.interval
     else:
-        return args.profile, args.access_key, args.secret_key, args.regions.split(','), args.timerange, args.json, args.csv, args.dimension, args.tag
+        return args.profile, args.access_key, args.secret_key, args.regions.split(','), args.timerange, args.json, args.csv, args.dimension, args.tag, args.interval
 
 
 def parse_args(argv):
@@ -311,13 +319,13 @@ def parse_args(argv):
             print_usage()
             os._exit(0)
 
-    p, a, s, rList, t, j, c, d, g = parse_options(argv[1:])
+    p, a, s, rList, t, j, c, d, g, i = parse_options(argv[1:])
 
-    return p, a, s, rList, t, j, c, d, g
+    return p, a, s, rList, t, j, c, d, g, i
 
 
 if __name__ == "__main__":
-    p, a, s, rList, t, j, c, d, g = parse_args(sys.argv)
+    p, a, s, rList, t, j, c, d, g, i = parse_args(sys.argv)
 
     # need either -a and -s, -p, or AWS_DEFAULT_PROFILE environment variable
     if not a and not s and not p:
@@ -388,14 +396,20 @@ if __name__ == "__main__":
         dtmp = d.split("|")
         for dt in dtmp:
             if dt not in GROUP_DIMENSIONS:
-                print("Error: invalid dimension: %s" %dt)
+                print("Error: invalid dimension: %s" %str(dt))
                 os._exit(1)
 
+    if i not in FC_INTERVALS:
+        print("Error: invalid time interval: %s" %str(i))
+        os._exit(1)
+
+    # finally, let's get some cost data!
     try:
+        # comment out customer service abbreviations for now
         #abbrv = build_abbreviations(a, s, rList[0], start_time, end_time)
         #ABBRV.update(abbrv)
         costs = get_costs(a, s, rList, start_time, end_time, d, g)
-        print_results(costs, j, c)
+        print_results(costs, j, c, start_time, end_time)
     except:
         e = sys.exc_info()
         traceback.print_exc()
