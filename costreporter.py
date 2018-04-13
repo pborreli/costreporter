@@ -265,7 +265,7 @@ def print_results(costs, use_json=False, use_csv=False, start=None, end=None):
 
 # human-readable option currently not used, so hide it from usage
 def print_usage():
-     print("costanalyzer.py <options>\n"
+     print("costreporter.py <options>\n"
            "\tOptions are:\n\n"
            "\t--help - Display this help message\n"
            "\t-p --profile <profile name> - AWS profile name (can be used instead of -a and -s options)\n"
@@ -288,7 +288,7 @@ def print_usage():
 
 
 def parse_options(argv):
-    parser = argparse.ArgumentParser(prog="costanalyzer.py",
+    parser = argparse.ArgumentParser(prog="costreporter.py",
                      add_help=False) # use print_usage() instead
 
     parser.add_argument("-p", "--profile", type=str, required=False)
