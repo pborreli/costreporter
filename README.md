@@ -1,4 +1,4 @@
-Cost Analyzer (Python 2.7)
+Cost Reporter (Python 2.7)
 
 Installation:
     1. Install Python 2.7 if not already installed.
@@ -6,13 +6,13 @@ Installation:
 
 Quick Start:
 
-$ python costanalyzer.py -a [aws access key] -s [aws secret key]
-$ python costanalyzer.py -p [profile name]
-$ AWS_DEFAULT_PROFILE=default python costanalyzer.py
+$ python costreporter.py -a [aws access key] -s [aws secret key]
+$ python costreporter.py -p [profile name]
+$ AWS_DEFAULT_PROFILE=default python costreporter.py
 
 For more information about options:
 ```
-costanalyzer.py <options>
+costreporter.py <options>
 	Options are:
 
 	--help - Display this help message
