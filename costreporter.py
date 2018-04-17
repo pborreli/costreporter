@@ -226,7 +226,6 @@ def consolidate_by_group(costs):
                         float(cost['unblended_cost']['Amount'])
                 out[i]['values']['usage_quantity'] += \
                         float(cost['usage_quantity']['Amount'])
-                print(out[i])
         else: # add to output
             tmp = {'group':cost['group'][0], 'values':{}}
             tmp['values'] = {'unblended_cost': float(cost['unblended_cost']['Amount']),
@@ -408,7 +407,7 @@ if __name__ == "__main__":
         # comment out customer service abbreviations for now
         #abbrv = build_abbreviations(a, s, rList[0], start_time, end_time)
         #ABBRV.update(abbrv)
-        costs = get_costs(a, s, rList, start_time, end_time, d, g)
+        costs = get_costs(a, s, rList, start_time, end_time, d, g, i)
         print_results(costs, j, c, start_time, end_time)
     except:
         e = sys.exc_info()
