@@ -1,14 +1,21 @@
 Cost Reporter (Python 2.7)
 
+[This utility was written by FittedCloud](https://www.fittedcloud.com)
+
+For more information about the software, see the blog post:
+
+[An Open Source tool using AWS Cost Explorer APIs for Reporting AWS Costs](https://www.fittedcloud.com/blog/open-source-tool-reporting-aws-costs/)
+
+
 Installation:
     1. Install Python 2.7 if not already installed.
     2. Install boto3 and botocore.  Use "sudo pip install boto3 botocore".
 
 Quick Start:
-
-$ python costreporter.py -a [aws access key] -s [aws secret key]
-$ python costreporter.py -p [profile name]
-$ AWS_DEFAULT_PROFILE=default python costreporter.py
+```
+$ python costreporter.py -a <aws access key> -s <aws secret key> -t <start-time as, YYYY-MM-DD>,<end-time as YYYY-MM-DD>
+$ python costreporter.py -p <profile name> -t <start-time as, YYYY-MM-DD>,<end-time as YYYY-MM-DD>
+```
 
 For more information about options:
 ```
