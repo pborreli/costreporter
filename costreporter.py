@@ -168,7 +168,6 @@ def get_costs(a, s, rlist, start, end, dims, tags, granularity="MONTHLY"):
             if len(groups) == 0: # group by service by default
                 groups.append({"Type":"DIMENSION", "Key":"SERVICE"})
 
-            # monthly usage
             if len(groups) > 0:
                 res = ce.get_cost_and_usage(TimePeriod={"Start":start, "End":end},
                                             Granularity=granularity,
@@ -220,13 +219,19 @@ def flatten(d, parent_key='', sep='_'):
 def consolidate_by_group(costs):
     out = []
     for cost in costs:
+        found = 0
+
+        # check if group already exists in list
         for i in range(0, len(out)):
             if out[i]['group'] == cost['group'][0]:
+                found = 1
                 out[i]['values']['unblended_cost'] += \
                         float(cost['unblended_cost']['Amount'])
                 out[i]['values']['usage_quantity'] += \
                         float(cost['usage_quantity']['Amount'])
-        else: # add to output
+                break
+        #else: # add to output
+        if found == 0:
             tmp = {'group':cost['group'][0], 'values':{}}
             tmp['values'] = {'unblended_cost': float(cost['unblended_cost']['Amount']),
                              'unblended_unit': cost['unblended_cost']['Unit'],
@@ -252,7 +257,7 @@ def print_results(costs, use_json=False, use_csv=False, start=None, end=None):
             csv_writer.writerow(cost)
     else:
         out = consolidate_by_group(costs)
-        print("\nSummary for costs: %s - %s\n" %(start, end))
+        print("\nSummary of costs: %s - %s\n" %(start, end))
         # print header.  hard-coded for now
         print("%s %61s" %("Group", "Cost"))
         print("%s %61s" %("-----", "----"))
