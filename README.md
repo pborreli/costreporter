@@ -13,9 +13,8 @@ Installation:
 
 Quick Start:
 ```
-$ python costreporter.py -a [aws access key] -s [aws secret key]
-$ python costreporter.py -p [profile name]
-$ AWS_DEFAULT_PROFILE=default python costreporter.py
+$ python costreporter.py -a <aws access key> -s <aws secret key> -t <start-time as, YYYY-MM-DD>,<end-time as YYYY-MM-DD>
+$ python costreporter.py -p <profile name> -t <start-time as, YYYY-MM-DD>,<end-time as YYYY-MM-DD>
 ```
 
 For more information about options:
