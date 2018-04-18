@@ -5,10 +5,13 @@ Installation:
     2. Install boto3 and botocore.  Use "sudo pip install boto3 botocore".
 
 Quick Start:
-
+```
 $ python costreporter.py -a [aws access key] -s [aws secret key]
 $ python costreporter.py -p [profile name]
 $ AWS_DEFAULT_PROFILE=default python costreporter.py
+```
+[This utility was written by FittedCloud](https://www.fittedcloud.com)
+
 
 For more information about the software, see the blog post:
 
