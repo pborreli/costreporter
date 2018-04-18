@@ -147,6 +147,20 @@ def build_abbreviations(a, s, r, start, end):
 def get_costs(a, s, rlist, start, end, dims, tags, granularity="MONTHLY"):
     costs = []
 
+    groupbys = []
+    if len(dims) > 0 or len(tags) > 0:
+        dims = dims.split(",")
+        for d in dims:
+            groupbys.append({"Type":"DIMENSION", "Key":d})
+
+        tags = tags.split(",")
+    if len(tags) > 0 and tags != [""]:
+        for t in tags:
+            groupbys.append({"Type":"TAG", "Key":t})
+
+    if len(groupbys) == 0: # group by service by default
+        groupbys.append({"Type":"DIMENSION", "Key":"SERVICE"})
+
     try:
         for r in rlist:
             ce = boto3.client('ce',
@@ -154,25 +168,12 @@ def get_costs(a, s, rlist, start, end, dims, tags, granularity="MONTHLY"):
                               aws_secret_access_key=s,
                               region_name=r)
 
-            groups = []
-            if len(dims) > 0 or len(tags) > 0:
-                dims = dims.split(",")
-                if len(dims) > 0 and dims != [""]:
-                    for d in dims:
-                        groups.append({"Type":"DIMENSION", "Key":d})
 
-                tags = tags.split(",")
-            if len(tags) > 0 and tags != [""]:
-                for t in tags:
-                    groups.append({"Type":"TAG", "Key":t})
-            if len(groups) == 0: # group by service by default
-                groups.append({"Type":"DIMENSION", "Key":"SERVICE"})
-
-            if len(groups) > 0:
+            if len(groupbys) > 0:
                 res = ce.get_cost_and_usage(TimePeriod={"Start":start, "End":end},
                                             Granularity=granularity,
                                             Metrics=["BlendedCost", "UnblendedCost", "UsageQuantity"],
-                                            GroupBy=groups)
+                                            GroupBy=groupbys)
             else:
                 res = ce.get_cost_and_usage(TimePeriod={"Start":start, "End":end},
                                             Granularity=granularity,
@@ -280,7 +281,7 @@ def print_usage():
            #"\t-h --human-readable <'k', 'm', or 'g'> display results in KB, MB, or GB.\n"
            "\t-j --json - Output in JSON format.\n"
            "\t-c --csv - Output as CSV.  Not compatible with --json.\n"
-           "\t-d --dimension <dimension> - Group output by dimension (examples: 'AZ','INSTANCE_TYPE','LINKED_ACCOUNT','OPERATION','PURCHASE_TYPE','REGION','SERVICE','USAGE_TYPE','USAGE_TYPE_GROUP','RECORD_TYPE','OPERATING_SYSTEM','TENANCY','SCOPE','PLATFORM','SUBSCRIPTION_ID','LEGAL_ENTITY_NAME','DEPLOYMENT_OPTION','DATABASE_ENGINE','CACHE_ENGINE','INSTANCE_TYPE_FAMILY')\n"
+           "\t-d --dimension <dimension> - Group output by dimension (examples: AZ,INSTANCE_TYPE,LINKED_ACCOUNT,OPERATION,PURCHASE_TYPE,REGION,SERVICE,USAGE_TYPE,USAGE_TYPE_GROUP,RECORD_TYPE,OPERATING_SYSTEM,TENANCY,SCOPE,PLATFORM,SUBSCRIPTION_ID,LEGAL_ENTITY_NAME,DEPLOYMENT_OPTION,DATABASE_ENGINE,CACHE_ENGINE,INSTANCE_TYPE_FAMILY)\n"
            "\t-g --tag <tag name> - Group by tag name (list of names in format Tag1,Tag2,...,TagN).\n"
            "\t-i --interval <interval> - Dumps stats at <interval> granularity.  Valid values are MONTHLY (default) and DAILY."
            #"\t-b --abbrv - Output service abbreviations.\n\n"
@@ -397,7 +398,7 @@ if __name__ == "__main__":
 
     # simple sanity check for dimensions
     if d != "":
-        dtmp = d.split("|")
+        dtmp = d.split(",")
         for dt in dtmp:
             if dt not in GROUP_DIMENSIONS:
                 print("Error: invalid dimension: %s" %str(dt))
