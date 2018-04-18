@@ -10,6 +10,10 @@ $ python costreporter.py -a [aws access key] -s [aws secret key]
 $ python costreporter.py -p [profile name]
 $ AWS_DEFAULT_PROFILE=default python costreporter.py
 
+For more information about the software, see the blog post:
+
+[An Open Source tool using AWS Cost Explorer APIs for Reporting AWS Costs](https://www.fittedcloud.com/blog/open-source-tool-reporting-aws-costs/)
+
 For more information about options:
 ```
 costreporter.py <options>
